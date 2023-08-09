@@ -38,6 +38,11 @@ namespace MGSimpleForms.MVVM
     }
 
 
+    public class FormViewModel<T> : FormViewModel
+    {
+        public T Item { get => GetProperty<T>(); set => SetProperty(value); }
+    }
+
     public class FormViewModel : ViewModel
     {
         //add Events...

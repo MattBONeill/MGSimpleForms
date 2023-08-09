@@ -195,6 +195,7 @@ namespace MGSimpleForms.Attributes
         /// </summary>
         public string GridFieldCheckPropName { get; set; }
     }
+   
     [AttributeUsage(AttributeTargets.Class)]
     public sealed class FormAttribute : BaseFormAttribute
     {
@@ -214,12 +215,13 @@ namespace MGSimpleForms.Attributes
         public double BorderSize { get; set; } = 0;
         public PropertyOrder PropertyOrder { get; set; } = PropertyOrder.ParentFirst;
         public bool UseMetaDataReorder { get; set; }
+        public bool UseAllProperties { get; set; } = false;
     }
 
     public enum FormFlow
     {
         Vertical,
-        Horizontal,
+        Columned,
         Grid
     }
 
@@ -261,5 +263,15 @@ namespace MGSimpleForms.Attributes
             Rows = rows;
         }
     }
+
+    public sealed class ColumnedSizeAttribute : BaseFormAttribute
+    {
+        public int Columns { get; }
+        public ColumnedSizeAttribute(int columns = 2)
+        {
+            Columns = columns;
+        }
+    }
+
 
 }

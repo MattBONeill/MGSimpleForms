@@ -20,5 +20,6 @@
         <Button Name="gl" Click="gl_Click" >Grid List Testing</Button>
         <Button Name="lbl" Click="lbl_Click" >Label Testing</Button>
         <Button Name="Question" Click="Question_Click" >Question Box/Grid Form Testing</Button>
+        <Button Name="Item" Click="Item_Click">Edit Item Testing</Button>
     </StackPanel>
 </Window>

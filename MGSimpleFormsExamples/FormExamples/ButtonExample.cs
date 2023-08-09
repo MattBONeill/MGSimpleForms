@@ -12,6 +12,7 @@ using System.Windows.Input;
 namespace MGSimpleFormsExamples.FormExamples
 {
     [Form("Button Examples", TitleFontSize = 24)]
+        //, Border = Border.LeftPadding | Border.RightPadding| Border.TopPadding)]
     internal class ButtonExample : FormViewModel
     {
         public ButtonExample()

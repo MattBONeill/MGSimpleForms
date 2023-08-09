@@ -1,5 +1,6 @@
 ﻿using MGSimpleForms;
 using MGSimpleForms.MVVM;
+using MGSimpleFormsExamples.EditExamples;
 using MGSimpleFormsExamples.FormExamples;
 using MGSimpleFormsExamples.GridFormExamples;
 using System;
@@ -86,6 +87,12 @@ namespace MGSimpleFormsExamples
 
             QuestionBox.Show("Testal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkgTestal;sjdhgflksjfzhpoiltjkjhdfxv kjsdfghkj drn;lkdh filujdr hfg;usd glkjernjarhg lkjuarhntg; idhfrg liarnl harlkg", "Test 4");
 
+        }
+
+        private void Item_Click(object sender, RoutedEventArgs e)
+        {
+
+            Display(new ShowItemExample());
         }
     }
 }

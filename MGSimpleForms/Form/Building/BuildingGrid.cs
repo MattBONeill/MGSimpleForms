@@ -9,13 +9,14 @@ using System.Windows.Controls;
 using System.Windows;
 using MGSimpleForms.MVVM;
 using Border = MGSimpleForms.Attributes.Border;
+using System.Windows.Data;
+using System.Xml.Linq;
 
 namespace MGSimpleForms.Form.Building
 {
 
     internal class BuildingGrid
     {
-
         public static void Build(Grid grid, FormViewModel ViewModel)
         {
             if (grid == null)
@@ -50,13 +51,15 @@ namespace MGSimpleForms.Form.Building
                     throw new Exception($"Property {prop.Name} is missing Main Build option");
 
 
-                builder.AddItems(Location, Row, GenerateControl(builder, BuildConditions, prop, ViewModel, Name).ToArray());
+                if (BuildConditions.Count != 1)
+                    throw new Exception($"More that one option on the Property: {prop.Name}");
+
+                builder.AddItems(Location, Row, GenerateControl(builder, BuildConditions.First(), prop, ViewModel, Name).ToArray());
             }
 
             builder.FinishBorder();
         }
-
-
+        
         private static void AddTitleToGrid(BuilderStates builder)
         {
             if (!string.IsNullOrEmpty(builder.FormOptions.Title))
@@ -65,13 +68,8 @@ namespace MGSimpleForms.Form.Building
             }
         }
 
-        private static IEnumerable<UIElement> GenerateControl(BuilderStates builder, List<BaseFormAttribute> Attributes, PropertyInfo Prop, FormViewModel ViewModel, NameAttribute Name)
+        private static IEnumerable<UIElement> GenerateControl(BuilderStates builder, BaseFormAttribute BuildType, PropertyInfo Prop, FormViewModel ViewModel, NameAttribute Name)
         {
-            if (Attributes.Count != 1)
-                throw new Exception($"More that one option on the Property: {Prop.Name}");
-
-            var BuildType = Attributes[0];
-
             var VisualName = Name?.Value ?? string.Empty;
 
             List<UIElement> itemsToAdd = new List<UIElement>();
@@ -202,28 +200,127 @@ namespace MGSimpleForms.Form.Building
             return itemsToAdd;
         }
 
+
+        public static void BuildItems<T>(Grid grid, FormViewModel<T> ViewModel, Predicate<PropertyInfo> CustomFieldCheck = null, Func<PropertyInfo, UIElement> CustomMakeElement = null)
+        {
+            if (grid == null)
+                throw new Exception("No Grid was given to fill");
+            if (ViewModel == null)
+                throw new Exception("No View Model was given to pull from");
+
+            var builder = new BuilderStates(ViewModel, grid);
+
+            if (string.IsNullOrEmpty(builder.FormOptions.Title))
+                builder.FormOptions.Title = typeof(T).Name;
+
+            AddTitleToGrid(builder);
+
+            foreach (var prop in builder.ViewModelProperties)
+            {
+
+                if (CustomFieldCheck != null && !CustomFieldCheck(prop))
+                    return;
+
+                UIElement Element = null;
+                var label = ControlBuilder.BuildLabel(prop.Name);
+
+                if (prop.PropertyType == typeof(int) ||
+                   prop.PropertyType == typeof(decimal))
+                {
+                    Element = ControlBuilder.BuildTextBox(new Attributes.TextBoxAttribute(), prop, null);
+                }
+                else if (prop.PropertyType == typeof(string))
+                {
+                    var SourceListProp = ViewModel.GetType().GetProperty(prop.Name);
+                    if (SourceListProp != null)
+                    {
+                        var cbo = ControlBuilder.BuildComboBox(new Attributes.ComboBoxAttribute()
+                        {
+                            IsEditable = true,
+                        }, SourceListProp, ViewModel);
+                        cbo.SetBinding(ComboBox.SelectedItemProperty, new Binding(prop.Name));
+                        cbo.SetBinding(ComboBox.ItemsSourceProperty, new Binding(SourceListProp.Name) { Source = ViewModel });
+                        Element = cbo;
+                    }
+                    else
+                        Element = ControlBuilder.BuildTextBox(new Attributes.TextBoxAttribute(), prop, null);
+                }
+                else if (prop.PropertyType == typeof(bool))
+                {
+                    Element = ControlBuilder.BuildCheckBox(prop);
+                }
+                else if (prop.PropertyType == typeof(DateTime))
+                {
+                    Element = ControlBuilder.BuildDatePicker(new Attributes.DatePickAttribute(), prop, ViewModel);
+                }
+                else if (prop.PropertyType.IsClass)
+                {
+                    //try to find Source with Same Name
+                    var SourceListProp = ViewModel.GetType().GetProperty(prop.Name);
+                    if (SourceListProp == null)
+                    {
+                        //Try to find first IEnumerable That has the same Type 
+                        SourceListProp = ViewModel.GetType().GetProperties().FirstOrDefault(i =>
+                            i.PropertyType.GetInterfaces().Any(i => i.Name.StartsWith("IEnumerable")) &&
+                            ((i.PropertyType.GenericTypeArguments.Length > 0 && i.PropertyType.GenericTypeArguments[0] == prop.PropertyType) ||
+                            i.PropertyType.Name.StartsWith(prop.PropertyType.Name)));
+                    }
+
+                    if (SourceListProp == null)
+                    {
+                        Element = ControlBuilder.BuildLabel("N/A");
+                    }
+                    else
+                    {
+                        var cbo = ControlBuilder.BuildComboBox(new Attributes.ComboBoxAttribute()
+                        {
+                            IsEditable = true,
+                        }, SourceListProp, ViewModel);
+                        cbo.SetBinding(ComboBox.SelectedItemProperty, new Binding(prop.Name));
+                        cbo.SetBinding(ComboBox.ItemsSourceProperty, new Binding(SourceListProp.Name) { Source = ViewModel });
+                        Element = cbo;
+                    }
+                }
+                else
+                {
+                    Element = ControlBuilder.BuildLabel("N/A");
+                }
+                
+
+                builder.AddItems(new UIElement[] { label, Element });
+            }
+
+            builder.FinishBorder();
+        }
+
+
+
     }
+
 
     class BuilderStates
     {
         //Needed for Vertical
         int ColumnStart = 0;
+        int WorkingColumn = 0;
         int RowStart = 0;
 
         bool HasTitle = false;
-
+        ColumnedSizeAttribute Columned;
         public BuilderStates(FormViewModel ViewModel, Grid grid)
         {
             FormOptions = ViewModel.GetType()
                 .GetCustomAttributes<FormAttribute>().FirstOrDefault() ?? new FormAttribute(string.Empty);
             WorkingGrid = grid;
+
             ViewModelProperties = GetProperties(ViewModel, FormOptions.PropertyOrder).ToList();
 
             if (FormOptions.UseMetaDataReorder == true)
                 ViewModelProperties = ViewModelProperties.OrderBy(i => i.MetadataToken).ToList();
 
-            var Size = ViewModel.GetType().GetCustomAttributes<GridSizeAttribute>().FirstOrDefault() ?? new GridSizeAttribute(1, 1);
-            CreateFormGrid(Size);
+            var GridSize = ViewModel.GetType().GetCustomAttributes<GridSizeAttribute>().FirstOrDefault() ?? new GridSizeAttribute(1, 1);
+            Columned = ViewModel.GetType().GetCustomAttributes<ColumnedSizeAttribute>().FirstOrDefault() ?? new ColumnedSizeAttribute(2);
+            CreateFormGrid(GridSize, Columned);
         }
 
         public FormAttribute FormOptions { get; set; }
@@ -233,18 +330,24 @@ namespace MGSimpleForms.Form.Building
         private IEnumerable<PropertyInfo> GetProperties(FormViewModel ViewModel, PropertyOrder PropertyOrder)
         {
             IEnumerable<PropertyInfo> Props;
+            var ViewModelType = ViewModel.GetType();
+            var FormViewModelGenericType = ViewModelType.GetFormViewModelGenericType();
+            if (FormViewModelGenericType != null)
+            {
+                ViewModelType = FormViewModelGenericType;
+            }
 
             switch (PropertyOrder)
             {
                 case PropertyOrder.ParentFirst:
-                    Props = ViewModel.GetType().GetPropertiesByParent();
+                    Props = ViewModelType.GetPropertiesByParent();
                     break;
                 case PropertyOrder.ChildFirst:
-                    Props = ViewModel.GetType().GetPropertiesByChild();
+                    Props = ViewModelType.GetPropertiesByChild();
                     break;
                 case PropertyOrder.Default:
                 default:
-                    Props = ViewModel.GetType().GetProperties();
+                    Props = ViewModelType.GetProperties();
                     break;
             }
 
@@ -259,7 +362,7 @@ namespace MGSimpleForms.Form.Building
                 return new GridLength(FormOptions.BorderSize);
         }
 
-        public void CreateFormGrid(GridSizeAttribute size)
+        public void CreateFormGrid(GridSizeAttribute size, ColumnedSizeAttribute columned)
         {
             WorkingGrid.Children.Clear();
             WorkingGrid.ColumnDefinitions.Clear();
@@ -289,8 +392,31 @@ namespace MGSimpleForms.Form.Building
                         WorkingGrid.RowDefinitions.Add(new RowDefinition() { Height = CreateBorder() });
                     break;
 
-                case FormFlow.Horizontal:
-                    throw new NotImplementedException();
+                case FormFlow.Columned:
+
+                    if (FormOptions.Border.HasFlag(Border.LeftPadding) == true)
+                    {
+                        WorkingGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = CreateBorder() });
+                        ColumnStart = 1;
+                    }
+
+                    for (int cnt = 0; cnt < columned.Columns; cnt++)
+                    {
+                        WorkingGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+                        WorkingGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(2, GridUnitType.Star) });
+                    }
+
+                    if (FormOptions.Border.HasFlag(Border.RightPadding) == true)
+                        WorkingGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = CreateBorder() });
+
+                    if (FormOptions.Border.HasFlag(Border.TopPadding) == true)
+                    {
+                        WorkingGrid.RowDefinitions.Add(new RowDefinition() { Height = CreateBorder() });
+                        RowStart = 1;
+                    }
+                    WorkingColumn = ColumnStart;
+                    break;
+
                 case FormFlow.Vertical:
                 default:
 
@@ -346,25 +472,49 @@ namespace MGSimpleForms.Form.Building
                     WorkingGrid.Children.Add(GridItem);
                     break;
 
-                case FormFlow.Horizontal:
-                    throw new NotImplementedException();
+                case FormFlow.Columned:
+                    if (items.Length > 2)
+                        throw new Exception("Can't add more that 2 items when in Vertical mode");
+                    
+                    if (WorkingColumn > Columned.Columns + ColumnStart)
+                    {    
+                        WorkingColumn = ColumnStart;
+                        RowStart += GenerateRow(Row);
+                    }
+                    
+
+                    int ColumnedCnt = WorkingColumn;
+                    foreach (var item in items)
+                    {
+                        Grid.SetColumn(item, ColumnedCnt);
+                        Grid.SetRow(item, RowStart);
+
+                        WorkingGrid.Children.Add(item);
+                        ColumnedCnt++;
+                    }
+                    WorkingColumn += 2;
+
+                    if (items.Length == 1)
+                        Grid.SetColumnSpan(items[0], 2);
+                    break;
+
                 case FormFlow.Vertical:
                 default:
 
                     if (items.Length > 3)
                         throw new Exception("Can't add more that 3 items when in Vertical mode");
 
-                    var CurrentRow = RowStart;
+                    var VerticalCurrentRow = RowStart;
                     RowStart += GenerateRow(Row);
 
-                    int cnt = 0;
+                    int Verticalcnt = 0;
                     foreach (var item in items)
                     {
-                        Grid.SetColumn(item, ColumnStart + cnt);
-                        Grid.SetRow(item, CurrentRow);
+                        Grid.SetColumn(item, ColumnStart + Verticalcnt);
+                        Grid.SetRow(item, VerticalCurrentRow);
 
                         WorkingGrid.Children.Add(item);
-                        cnt++;
+                        Verticalcnt++;
                     }
                     if (items.Length == 1)
                         Grid.SetColumnSpan(items[0], 3);
@@ -382,8 +532,8 @@ namespace MGSimpleForms.Form.Building
             {
                 case FormFlow.Grid:
                     return 0;
-                case FormFlow.Horizontal:
-                    throw new NotImplementedException();
+                case FormFlow.Columned:
+                    return _GenerateRow(new GridLength(1, GridUnitType.Star), 5);
                 case FormFlow.Vertical:
                 default:
                     return _GenerateRow(Row);
@@ -427,8 +577,13 @@ namespace MGSimpleForms.Form.Building
                     HasTitle = true;
                     break;
 
-                case FormFlow.Horizontal:
-                    throw new NotImplementedException();
+                case FormFlow.Columned:
+                    AddItems(Title);
+                    Grid.SetColumnSpan(Title, Columned.Columns*2);
+                    WorkingColumn = ColumnStart;
+                    RowStart += GenerateRow(null);
+                    WorkingGrid.RowDefinitions[WorkingGrid.RowDefinitions.Count-2].Height = GridLength.Auto;
+                    break;
                 case FormFlow.Vertical:
                 default:
                     AddItems(Title);
@@ -442,8 +597,12 @@ namespace MGSimpleForms.Form.Building
             {
                 case FormFlow.Grid:
                     return;
-                case FormFlow.Horizontal:
-                    throw new NotImplementedException();
+                case FormFlow.Columned:
+                    WorkingGrid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(1, GridUnitType.Star) });
+
+                    if (FormOptions.Border.HasFlag(Border.BottomPadding) == true)
+                        WorkingGrid.RowDefinitions.Add(new RowDefinition() { Height = CreateBorder() });
+                    break;
                 case FormFlow.Vertical:
                 default:
                     if (FormOptions.Border.HasFlag(Border.BottomPadding) == true)
@@ -499,6 +658,18 @@ namespace MGSimpleForms.Form.Building
             else if (items.Length == 2)
                 Grid.SetColumnSpan(items[1], 2);
 
+        }
+
+
+        public static bool IsGenericFormViewModel(this Type typ) => GetFormViewModelGenericType(typ) != null;
+        public static Type GetFormViewModelGenericType(this Type typ)
+        {
+            if (typ == typeof(FormViewModel) || typ == null)
+                return null;
+            if (typ.IsGenericType && typ.Name == typeof(FormViewModel<>).Name)
+                return typ.GenericTypeArguments.First();
+            else
+                return GetFormViewModelGenericType(typ.BaseType);
         }
 
     }
