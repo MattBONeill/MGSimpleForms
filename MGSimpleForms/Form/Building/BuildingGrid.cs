@@ -35,6 +35,9 @@ namespace MGSimpleForms.Form.Building
                 if (!BuildConditions.Any())
                     continue;
 
+                if (CustomFormObjects.FieldCheck?.Invoke(prop) == false)
+                    return;
+
                 var Name = BuildConditions.FirstOrDefault(i => i is NameAttribute) as NameAttribute;
                 if (Name != null)
                     BuildConditions.Remove(Name);
@@ -194,14 +197,27 @@ namespace MGSimpleForms.Form.Building
                     break;
 
             }
+           
+            if (CustomFormObjects.MakeAttributeElement != null)
+            {
+                itemsToAdd.Clear(); 
+                var CustomElement = CustomFormObjects.MakeAttributeElement.Invoke(BuildType);
+                if (CustomElement != null)
+                {
+                    if (!string.IsNullOrEmpty(VisualName))
+                    {
+                        itemsToAdd.Add(ControlBuilder.BuildLabel(new LabelAttribute(), null, ViewModel, VisualName));
+                    }
+                    itemsToAdd.Add(CustomElement);
+                }
+            }
 
 
 
             return itemsToAdd;
         }
 
-
-        public static void BuildItems<T>(Grid grid, FormViewModel<T> ViewModel, Predicate<PropertyInfo> CustomFieldCheck = null, Func<PropertyInfo, UIElement> CustomMakeElement = null)
+        public static void BuildItems<T>(Grid grid, FormViewModel<T> ViewModel, Func<PropertyInfo, UIElement> CustomMakeElement = null)
         {
             if (grid == null)
                 throw new Exception("No Grid was given to fill");
@@ -218,7 +234,7 @@ namespace MGSimpleForms.Form.Building
             foreach (var prop in builder.ViewModelProperties)
             {
 
-                if (CustomFieldCheck != null && !CustomFieldCheck(prop))
+                if (CustomFormObjects.FieldCheck?.Invoke(prop) == false)
                     return;
 
                 UIElement Element = null;
@@ -285,18 +301,29 @@ namespace MGSimpleForms.Form.Building
                 {
                     Element = ControlBuilder.BuildLabel("N/A");
                 }
-                
+
+                if (CustomFormObjects.MakeElement != null)
+                {
+                    var CustomElement = CustomFormObjects.MakeElement.Invoke(prop);
+                    if (CustomElement != null)
+                        Element = CustomElement;
+                }
+
 
                 builder.AddItems(new UIElement[] { label, Element });
             }
 
             builder.FinishBorder();
         }
-
-
-
     }
 
+
+    public class CustomFormObjects
+    {
+        public static Predicate<PropertyInfo> FieldCheck { get; set; }
+        public static Func<PropertyInfo, UIElement> MakeElement { get; set; }
+        public static Func<BaseFormAttribute, UIElement> MakeAttributeElement { get; set; }
+    }
 
     class BuilderStates
     {
