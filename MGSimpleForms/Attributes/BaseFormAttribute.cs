@@ -209,6 +209,7 @@ namespace MGSimpleForms.Attributes
         }
 
         public string Title { get; set; } = string.Empty;
+        public string TitleBinding { get; set; } = string.Empty;
         public int TitleFontSize { get; set; } = 16;
         public FormFlow Flow { get; set; } = FormFlow.Vertical;
         public Border Border { get; set; } = Border.FullPadding;

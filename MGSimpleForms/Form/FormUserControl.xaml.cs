@@ -23,6 +23,8 @@ namespace MGSimpleForms.Form
     /// </summary>
     public partial class FormUserControl : UserControl
     {
+
+        bool HasLoaded = false;
         public FormUserControl()
         {
             InitializeComponent();
@@ -36,14 +38,25 @@ namespace MGSimpleForms.Form
             viewModel.Parent = this;
             var typ = DataContext.GetType().GetFormViewModelGenericType();
             if (typ != null)
-                typeof(BuildingGrid).GetMethod("BuildItems")?.MakeGenericMethod(typ).Invoke(null, new object[] { grdForm, viewModel, null, null });
-            
+                //typeof(BuildingGrid).GetMethod("BuildItems")?.MakeGenericMethod(typ).Invoke(null, new object[] { grdForm, viewModel, null, null });
+                BuildingGrid.BuildItems(grdForm, viewModel, typ);
             else
                 BuildingGrid.Build(grdForm, viewModel);
+
+            if (HasLoaded)
+                CallLoadForm();
+
         }
 
 
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            HasLoaded = true;
+            CallLoadForm();
+        }
+
+
+        void CallLoadForm()
         {
             if (DataContext is not FormViewModel viewModel)
                 return;

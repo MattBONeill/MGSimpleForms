@@ -50,7 +50,6 @@ namespace MGSimpleFormsExamples.FormExamples
 
 
 
-        DisplayTestItem _Selected;
         public DisplayTestItem Selected { get => GetProperty<DisplayTestItem>(); set => SetProperty(value); }
 
         [ListView(IsGridView =true, SelectedItem= nameof(Selected))]

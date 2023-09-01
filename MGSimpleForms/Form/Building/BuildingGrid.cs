@@ -15,9 +15,9 @@ using System.Xml.Linq;
 namespace MGSimpleForms.Form.Building
 {
 
-    internal class BuildingGrid
+    public class BuildingGrid
     {
-        public static void Build(Grid grid, FormViewModel ViewModel)
+        public static void Build(Grid grid, FormViewModel ViewModel, ICustomBuildOptions BuildOptions = null)
         {
             if (grid == null)
                 throw new Exception("No Grid was given to fill");
@@ -35,7 +35,7 @@ namespace MGSimpleForms.Form.Building
                 if (!BuildConditions.Any())
                     continue;
 
-                if (CustomFormObjects.FieldCheck?.Invoke(prop) == false)
+                if (BuildOptions?.FieldCheck(prop) == false)
                     return;
 
                 var Name = BuildConditions.FirstOrDefault(i => i is NameAttribute) as NameAttribute;
@@ -65,13 +65,13 @@ namespace MGSimpleForms.Form.Building
         
         private static void AddTitleToGrid(BuilderStates builder)
         {
-            if (!string.IsNullOrEmpty(builder.FormOptions.Title))
+            if (!string.IsNullOrEmpty(builder.FormOptions.Title) || !string.IsNullOrEmpty(builder.FormOptions.TitleBinding))
             {
-                builder.AddTitle(ControlBuilder.BuildTitle(builder.FormOptions.Title, builder.FormOptions.TitleFontSize));
+                builder.AddTitle(ControlBuilder.BuildTitle(builder.FormOptions.Title, builder.FormOptions.TitleFontSize, builder.FormOptions.TitleBinding));
             }
         }
 
-        private static IEnumerable<UIElement> GenerateControl(BuilderStates builder, BaseFormAttribute BuildType, PropertyInfo Prop, FormViewModel ViewModel, NameAttribute Name)
+        private static IEnumerable<UIElement> GenerateControl(BuilderStates builder, BaseFormAttribute BuildType, PropertyInfo Prop, FormViewModel ViewModel, NameAttribute Name, ICustomBuildOptions BuildOptions = null)
         {
             var VisualName = Name?.Value ?? string.Empty;
 
@@ -198,10 +198,10 @@ namespace MGSimpleForms.Form.Building
 
             }
            
-            if (CustomFormObjects.MakeAttributeElement != null)
+            if (BuildOptions != null)
             {
                 itemsToAdd.Clear(); 
-                var CustomElement = CustomFormObjects.MakeAttributeElement.Invoke(BuildType);
+                var CustomElement = BuildOptions.MakeAttributeElement(BuildType);
                 if (CustomElement != null)
                 {
                     if (!string.IsNullOrEmpty(VisualName))
@@ -217,7 +217,9 @@ namespace MGSimpleForms.Form.Building
             return itemsToAdd;
         }
 
-        public static void BuildItems<T>(Grid grid, FormViewModel<T> ViewModel, Func<PropertyInfo, UIElement> CustomMakeElement = null)
+        public static void BuildItems<T>(Grid grid, FormViewModel<T> ViewModel, ICustomBuildOptions BuildOptions = null) => BuildItems(grid, ViewModel, typeof(T), BuildOptions);
+        
+        public static void BuildItems(Grid grid, FormViewModel ViewModel, Type T, ICustomBuildOptions BuildOptions = null)
         {
             if (grid == null)
                 throw new Exception("No Grid was given to fill");
@@ -227,14 +229,14 @@ namespace MGSimpleForms.Form.Building
             var builder = new BuilderStates(ViewModel, grid);
 
             if (string.IsNullOrEmpty(builder.FormOptions.Title))
-                builder.FormOptions.Title = typeof(T).Name;
+                builder.FormOptions.Title = T.Name;
 
             AddTitleToGrid(builder);
 
             foreach (var prop in builder.ViewModelProperties)
             {
 
-                if (CustomFormObjects.FieldCheck?.Invoke(prop) == false)
+                if (BuildOptions?.FieldCheck(prop) == false)
                     return;
 
                 UIElement Element = null;
@@ -302,9 +304,9 @@ namespace MGSimpleForms.Form.Building
                     Element = ControlBuilder.BuildLabel("N/A");
                 }
 
-                if (CustomFormObjects.MakeElement != null)
+                if (BuildOptions != null)
                 {
-                    var CustomElement = CustomFormObjects.MakeElement.Invoke(prop);
+                    var CustomElement = BuildOptions.MakeElement(prop);
                     if (CustomElement != null)
                         Element = CustomElement;
                 }
@@ -318,12 +320,26 @@ namespace MGSimpleForms.Form.Building
     }
 
 
-    public class CustomFormObjects
+    public interface ICustomBuildOptions
     {
-        public static Predicate<PropertyInfo> FieldCheck { get; set; }
-        public static Func<PropertyInfo, UIElement> MakeElement { get; set; }
-        public static Func<BaseFormAttribute, UIElement> MakeAttributeElement { get; set; }
+        /// <summary>
+        /// Used to find out if a property should be selected for Creation
+        /// </summary>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        bool FieldCheck(PropertyInfo property);
+        /// <summary>
+        /// 
+        /// Return Null for No Element Made
+        /// </summary>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        UIElement MakeElement(PropertyInfo property);
+
+        UIElement MakeAttributeElement(BaseFormAttribute property);
+        
     }
+
 
     class BuilderStates
     {

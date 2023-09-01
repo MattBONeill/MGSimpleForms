@@ -125,7 +125,6 @@ namespace MGSimpleFormsExamples.FormExamples
             return lbl;
         });
 
-        TestingItem _testSelected;
         public TestingItem testSelected { get => GetProperty<TestingItem>(); set => SetProperty(value); }
     }
 

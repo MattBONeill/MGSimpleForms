@@ -46,10 +46,11 @@ namespace MGSimpleForms.MVVM
     public class FormViewModel : ViewModel
     {
         //add Events...
-        List<FrameworkElement> ToDisableElements = new List<FrameworkElement>();
+        internal List<FrameworkElement> ToDisableElements = new List<FrameworkElement>();
         internal Dispatcher Dispatcher { get; set; }
 
         internal UserControl Parent { get; set; }
+        public bool StopClose { get; private set; }
 
         /// <summary>
         /// Gets the Window this ViewModel is Attached to
@@ -107,11 +108,12 @@ namespace MGSimpleForms.MVVM
             ToDisableElements.Add(element);
         }
 
-        public void Close()
+        public void Close(bool? Result = true)
         {
+            if(StopClose) return;
             var window = GetWindow();
 
-            window.DialogResult = true;
+            window.DialogResult = Result;
             window.Close();
         }
 
@@ -119,6 +121,51 @@ namespace MGSimpleForms.MVVM
         { 
 
         }
+        public void DisableFormButtons()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                foreach (var element in ToDisableElements)
+                {
+                    element.IsEnabled = false;
+                }
+            });
+
+        }
+        public void EnableFormButtons()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                foreach (var element in ToDisableElements)
+                {
+                    element.IsEnabled = true;
+                }
+            });
+        }
+
+
+        protected Task RunAsync(Action action, Action<Exception> ExceptionHandler = null)
+        {
+            return Task.Run(() =>
+            {
+                StopClose = true;
+                DisableFormButtons();
+                try
+                {
+                    action();
+                }
+                catch (Exception ex)
+                {
+                    if (ExceptionHandler != null)
+                        ExceptionHandler(ex);
+                    else
+                        MessageBox.Show(ex.ToString());
+                }
+                EnableFormButtons();
+                StopClose = false;
+            });
+        }
+
     }
 
 

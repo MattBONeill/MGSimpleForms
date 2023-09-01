@@ -21,9 +21,16 @@ namespace MGSimpleForms.Form.Building
 
     public class ControlBuilder
     {
-        public static TextBlock BuildTitle(string Title, int fontsize)
+        public static TextBlock BuildTitle(string Title, int fontsize, string TitleBinding)
         {
-            return new TextBlock() { Text = Title, FontSize = fontsize, TextAlignment = System.Windows.TextAlignment.Center };
+            if(!string.IsNullOrEmpty(Title))
+                return new TextBlock() { Text = Title, FontSize = fontsize, TextAlignment = System.Windows.TextAlignment.Center };
+            else
+            {
+                var txt = new TextBlock() { FontSize = fontsize, TextAlignment = System.Windows.TextAlignment.Center };
+                txt.SetBinding(TextBlock.TextProperty, TitleBinding);
+                return txt;
+            }
         }
 
         public static FrameworkElement BuildLabel(string Name, PropertyInfo prop = null) => BuildLabel(new LabelAttribute(), prop, null, Name);
