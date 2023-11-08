@@ -45,14 +45,17 @@ namespace MGSimpleForms.Form.Building
                 var Location = BuildConditions.FirstOrDefault(i => i is LocationAttribute) as LocationAttribute;
                 if (Location != null)
                     BuildConditions.Remove(Location);
+                else
+                    Location = new LocationAttribute(1,1);
 
                 var Row = BuildConditions.FirstOrDefault(i => i is RowAttribute) as RowAttribute;
                 if (Row != null)
                     BuildConditions.Remove(Row);
+                else
+                    Row = new RowAttribute() { RowSize = RowSize.Auto };
 
                 if (BuildConditions.Count == 0)
                     throw new Exception($"Property {prop.Name} is missing Main Build option");
-
 
                 if (BuildConditions.Count != 1)
                     throw new Exception($"More that one option on the Property: {prop.Name}");
@@ -79,7 +82,6 @@ namespace MGSimpleForms.Form.Building
 
             switch (BuildType)
             {
-
                 case LabelAttribute lblOptions:
                     if (!string.IsNullOrEmpty(VisualName))
                     {
@@ -201,7 +203,7 @@ namespace MGSimpleForms.Form.Building
             if (BuildOptions != null)
             {
                 itemsToAdd.Clear(); 
-                var CustomElement = BuildOptions.MakeAttributeElement(BuildType);
+                var CustomElement = BuildOptions.MakeAttributeElement(BuildType, Prop, ViewModel, builder);
                 if (CustomElement != null)
                 {
                     if (!string.IsNullOrEmpty(VisualName))
@@ -336,12 +338,12 @@ namespace MGSimpleForms.Form.Building
         /// <returns></returns>
         UIElement MakeElement(PropertyInfo property);
 
-        UIElement MakeAttributeElement(BaseFormAttribute property);
+        UIElement MakeAttributeElement(BaseFormAttribute Attribute, PropertyInfo property, FormViewModel ViewModel, BuilderStates Builder);
         
     }
 
 
-    class BuilderStates
+    public class BuilderStates
     {
         //Needed for Vertical
         int ColumnStart = 0;
@@ -415,7 +417,7 @@ namespace MGSimpleForms.Form.Building
             {
                 case FormFlow.Grid:
 
-                    if (size.Rows == 0 && size.Columns == 0)
+                    if (size.Rows <= 0 && size.Columns <= 0)
                         return;
 
                     if (FormOptions.Border.HasFlag(Border.LeftPadding) == true)

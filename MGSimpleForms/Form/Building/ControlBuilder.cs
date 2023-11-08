@@ -334,10 +334,12 @@ namespace MGSimpleForms.Form.Building
                     txt.HorizontalContentAlignment = HorizontalAlignment.Center;
                     break;
                 case Attributes.TextAlignment.Left:
-                    txt.HorizontalContentAlignment = HorizontalAlignment.Center;
+                    txt.HorizontalContentAlignment = HorizontalAlignment.Left;
+                    txt.VerticalContentAlignment = VerticalAlignment.Center;
                     break;
                 case Attributes.TextAlignment.Right:
-                    txt.HorizontalContentAlignment = HorizontalAlignment.Center;
+                    txt.HorizontalContentAlignment = HorizontalAlignment.Right;
+                    txt.VerticalContentAlignment = VerticalAlignment.Center;
                     break;
             }
             return txt;

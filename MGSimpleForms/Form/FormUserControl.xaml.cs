@@ -60,7 +60,7 @@ namespace MGSimpleForms.Form
         {
             if (DataContext is not FormViewModel viewModel)
                 return;
-
+            viewModel.SetDispatcher(Dispatcher);
             viewModel.OnFormLoaded();
         }
     }

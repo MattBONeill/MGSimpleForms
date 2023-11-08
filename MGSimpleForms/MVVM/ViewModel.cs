@@ -47,7 +47,7 @@ namespace MGSimpleForms.MVVM
     {
         //add Events...
         internal List<FrameworkElement> ToDisableElements = new List<FrameworkElement>();
-        internal Dispatcher Dispatcher { get; set; }
+        protected Dispatcher Dispatcher { get; set; }
 
         internal UserControl Parent { get; set; }
         public bool StopClose { get; private set; }
@@ -144,6 +144,10 @@ namespace MGSimpleForms.MVVM
         }
 
 
+        internal void SetDispatcher(Dispatcher dis)
+        {
+            Dispatcher = dis;
+        }
         protected Task RunAsync(Action action, Action<Exception> ExceptionHandler = null)
         {
             return Task.Run(() =>

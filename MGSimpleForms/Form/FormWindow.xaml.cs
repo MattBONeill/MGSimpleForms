@@ -1,6 +1,10 @@
-﻿using System;
+﻿using MGSimpleForms.Attributes;
+using MGSimpleForms.Form.Building;
+using MGSimpleForms.MVVM;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -22,6 +26,25 @@ namespace MGSimpleForms.Form
         public FormWindow()
         {
             InitializeComponent();
+        }
+
+        private void Window_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (DataContext is not FormViewModel viewModel)
+                return;
+
+            var FormOptions = viewModel.GetType().GetCustomAttributes<FormAttribute>().FirstOrDefault() ?? new FormAttribute(string.Empty);
+
+            if (!string.IsNullOrEmpty(FormOptions.Title))
+            {
+                this.Title = FormOptions.Title;
+            }
+            else
+            {
+                this.SetBinding(Window.TitleProperty, FormOptions.TitleBinding);
+            }
+
+
         }
     }
 }
