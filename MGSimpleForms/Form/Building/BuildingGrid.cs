@@ -11,6 +11,9 @@ using MGSimpleForms.MVVM;
 using Border = MGSimpleForms.Attributes.Border;
 using System.Windows.Data;
 using System.Xml.Linq;
+using System.Reflection.Emit;
+using static System.Net.Mime.MediaTypeNames;
+using System.Runtime.Intrinsics.Arm;
 
 namespace MGSimpleForms.Form.Building
 {
@@ -36,7 +39,7 @@ namespace MGSimpleForms.Form.Building
                     continue;
 
                 if (BuildOptions?.FieldCheck(prop) == false)
-                    return;
+                    continue;
 
                 var Name = BuildConditions.FirstOrDefault(i => i is NameAttribute) as NameAttribute;
                 if (Name != null)
@@ -46,7 +49,7 @@ namespace MGSimpleForms.Form.Building
                 if (Location != null)
                     BuildConditions.Remove(Location);
                 else
-                    Location = new LocationAttribute(1,1);
+                    Location = new LocationAttribute(1, 1);
 
                 var Row = BuildConditions.FirstOrDefault(i => i is RowAttribute) as RowAttribute;
                 if (Row != null)
@@ -60,12 +63,12 @@ namespace MGSimpleForms.Form.Building
                 if (BuildConditions.Count != 1)
                     throw new Exception($"More that one option on the Property: {prop.Name}");
 
-                builder.AddItems(Location, Row, GenerateControl(builder, BuildConditions.First(), prop, ViewModel, Name).ToArray());
+                builder.AddItems(Location, Row, GenerateControl(builder, BuildConditions.First(), prop, ViewModel, Name, BuildOptions).ToArray());
             }
 
             builder.FinishBorder();
         }
-        
+
         private static void AddTitleToGrid(BuilderStates builder)
         {
             if (!string.IsNullOrEmpty(builder.FormOptions.Title) || !string.IsNullOrEmpty(builder.FormOptions.TitleBinding))
@@ -198,11 +201,15 @@ namespace MGSimpleForms.Form.Building
                     itemsToAdd.Add(ListView);
                     break;
 
+                case Attributes.ProgressBar progressBar:
+                    var bar = ControlBuilder.BuildProgressBar(progressBar, Prop, ViewModel);
+
+                    itemsToAdd.Add(bar);
+                    break;
             }
-           
-            if (BuildOptions != null)
+
+            if (itemsToAdd.Count == 0 && BuildOptions != null)
             {
-                itemsToAdd.Clear(); 
                 var CustomElement = BuildOptions.MakeAttributeElement(BuildType, Prop, ViewModel, builder);
                 if (CustomElement != null)
                 {
@@ -220,7 +227,7 @@ namespace MGSimpleForms.Form.Building
         }
 
         public static void BuildItems<T>(Grid grid, FormViewModel<T> ViewModel, ICustomBuildOptions BuildOptions = null) => BuildItems(grid, ViewModel, typeof(T), BuildOptions);
-        
+
         public static void BuildItems(Grid grid, FormViewModel ViewModel, Type T, ICustomBuildOptions BuildOptions = null)
         {
             if (grid == null)
@@ -230,16 +237,22 @@ namespace MGSimpleForms.Form.Building
 
             var builder = new BuilderStates(ViewModel, grid);
 
-            if (string.IsNullOrEmpty(builder.FormOptions.Title))
+            if (builder.FormOptions.Title == null)
                 builder.FormOptions.Title = T.Name;
+
+            var ItemsCount = builder.ViewModelProperties.Where(prop => !(BuildOptions?.FieldCheck(prop) == false)).Count();
+            builder.ConfirmColumnWidth(ItemsCount);
+
 
             AddTitleToGrid(builder);
 
+
+
+
             foreach (var prop in builder.ViewModelProperties)
             {
-
                 if (BuildOptions?.FieldCheck(prop) == false)
-                    return;
+                    continue;
 
                 UIElement Element = null;
                 var label = ControlBuilder.BuildLabel(prop.Name);
@@ -247,7 +260,8 @@ namespace MGSimpleForms.Form.Building
                 if (prop.PropertyType == typeof(int) ||
                    prop.PropertyType == typeof(decimal))
                 {
-                    Element = ControlBuilder.BuildTextBox(new Attributes.TextBoxAttribute(), prop, null);
+                    Element = ControlBuilder.BuildTextBox(new Attributes.TextBoxAttribute() { Alignment = Attributes.TextAlignment.Left, Wrap = TextWrap.NoWrap }, prop, null);
+                    ((Control)Element).SetBinding(TextBox.TextProperty, new Binding("Item." + prop.Name) { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.LostFocus });
                 }
                 else if (prop.PropertyType == typeof(string))
                 {
@@ -258,20 +272,25 @@ namespace MGSimpleForms.Form.Building
                         {
                             IsEditable = true,
                         }, SourceListProp, ViewModel);
-                        cbo.SetBinding(ComboBox.SelectedItemProperty, new Binding(prop.Name));
+                        cbo.SetBinding(ComboBox.SelectedItemProperty, new Binding("Item." + prop.Name));
                         cbo.SetBinding(ComboBox.ItemsSourceProperty, new Binding(SourceListProp.Name) { Source = ViewModel });
                         Element = cbo;
                     }
                     else
-                        Element = ControlBuilder.BuildTextBox(new Attributes.TextBoxAttribute(), prop, null);
+                    {
+                        Element = ControlBuilder.BuildTextBox(new Attributes.TextBoxAttribute() { Alignment = Attributes.TextAlignment.Left, Wrap = TextWrap.NoWrap }, prop, null);
+                        ((Control)Element).SetBinding(TextBox.TextProperty, new Binding("Item." + prop.Name) { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.LostFocus });
+                    }
                 }
                 else if (prop.PropertyType == typeof(bool))
                 {
                     Element = ControlBuilder.BuildCheckBox(prop);
+                    ((Control)Element).SetBinding(System.Windows.Controls.Primitives.ToggleButton.IsCheckedProperty, "Item." + prop.Name);
                 }
                 else if (prop.PropertyType == typeof(DateTime))
                 {
                     Element = ControlBuilder.BuildDatePicker(new Attributes.DatePickAttribute(), prop, ViewModel);
+                    ((Control)Element).SetBinding(DatePicker.ValueProperty, "Item." + prop.Name);
                 }
                 else if (prop.PropertyType.IsClass)
                 {
@@ -288,7 +307,16 @@ namespace MGSimpleForms.Form.Building
 
                     if (SourceListProp == null)
                     {
-                        Element = ControlBuilder.BuildLabel("N/A");
+                        if (BuildOptions != null)
+                        {
+                            var CustomElement = BuildOptions.MakeElement(prop, ViewModel, builder);
+                            if (CustomElement != null)
+                                Element = CustomElement;
+                            else
+                                Element = ControlBuilder.BuildLabel("N/A");
+                        }
+                        else
+                            Element = ControlBuilder.BuildLabel("N/A");
                     }
                     else
                     {
@@ -296,21 +324,24 @@ namespace MGSimpleForms.Form.Building
                         {
                             IsEditable = true,
                         }, SourceListProp, ViewModel);
-                        cbo.SetBinding(ComboBox.SelectedItemProperty, new Binding(prop.Name));
+                        cbo.SetBinding(ComboBox.SelectedItemProperty, new Binding("Item." + prop.Name));
                         cbo.SetBinding(ComboBox.ItemsSourceProperty, new Binding(SourceListProp.Name) { Source = ViewModel });
                         Element = cbo;
                     }
                 }
                 else
                 {
-                    Element = ControlBuilder.BuildLabel("N/A");
-                }
 
-                if (BuildOptions != null)
-                {
-                    var CustomElement = BuildOptions.MakeElement(prop);
-                    if (CustomElement != null)
-                        Element = CustomElement;
+                    if (BuildOptions != null)
+                    {
+                        var CustomElement = BuildOptions.MakeElement(prop, ViewModel, builder);
+                        if (CustomElement != null)
+                            Element = CustomElement;
+                        else
+                            Element = ControlBuilder.BuildLabel("N/A");
+                    }
+                    else
+                        Element = ControlBuilder.BuildLabel("N/A");
                 }
 
 
@@ -336,10 +367,10 @@ namespace MGSimpleForms.Form.Building
         /// </summary>
         /// <param name="property"></param>
         /// <returns></returns>
-        UIElement MakeElement(PropertyInfo property);
+        UIElement MakeElement(PropertyInfo property, FormViewModel ViewModel, BuilderStates Builder);
 
         UIElement MakeAttributeElement(BaseFormAttribute Attribute, PropertyInfo property, FormViewModel ViewModel, BuilderStates Builder);
-        
+
     }
 
 
@@ -352,6 +383,7 @@ namespace MGSimpleForms.Form.Building
 
         bool HasTitle = false;
         ColumnedSizeAttribute Columned;
+        GridSizeAttribute GridSize;
         public BuilderStates(FormViewModel ViewModel, Grid grid)
         {
             FormOptions = ViewModel.GetType()
@@ -363,7 +395,7 @@ namespace MGSimpleForms.Form.Building
             if (FormOptions.UseMetaDataReorder == true)
                 ViewModelProperties = ViewModelProperties.OrderBy(i => i.MetadataToken).ToList();
 
-            var GridSize = ViewModel.GetType().GetCustomAttributes<GridSizeAttribute>().FirstOrDefault() ?? new GridSizeAttribute(1, 1);
+            GridSize = ViewModel.GetType().GetCustomAttributes<GridSizeAttribute>().FirstOrDefault() ?? new GridSizeAttribute(1, 1);
             Columned = ViewModel.GetType().GetCustomAttributes<ColumnedSizeAttribute>().FirstOrDefault() ?? new ColumnedSizeAttribute(2);
             CreateFormGrid(GridSize, Columned);
         }
@@ -494,7 +526,8 @@ namespace MGSimpleForms.Form.Building
         public void AddItems(LocationAttribute location, RowAttribute Row, params UIElement[] items)
         {
             if (items == null || items.Length == 0)
-                throw new Exception("No Items are Give to Add to Form");
+                return;
+            //throw new Exception("No Items are Give to Add to Form");
 
             switch (FormOptions.Flow)
             {
@@ -521,12 +554,12 @@ namespace MGSimpleForms.Form.Building
                     if (items.Length > 2)
                         throw new Exception("Can't add more that 2 items when in Vertical mode");
                     
-                    if (WorkingColumn > Columned.Columns + ColumnStart)
-                    {    
+                    if (WorkingColumn >= (Columned.Columns*2) + (FormOptions.Border.HasFlag(Border.LeftPadding) ? 1 : 0))
+                    {
                         WorkingColumn = ColumnStart;
                         RowStart += GenerateRow(Row);
                     }
-                    
+
 
                     int ColumnedCnt = WorkingColumn;
                     foreach (var item in items)
@@ -624,10 +657,10 @@ namespace MGSimpleForms.Form.Building
 
                 case FormFlow.Columned:
                     AddItems(Title);
-                    Grid.SetColumnSpan(Title, Columned.Columns*2);
+                    Grid.SetColumnSpan(Title, Columned.Columns * 2);
                     WorkingColumn = ColumnStart;
                     RowStart += GenerateRow(null);
-                    WorkingGrid.RowDefinitions[WorkingGrid.RowDefinitions.Count-2].Height = GridLength.Auto;
+                    WorkingGrid.RowDefinitions[WorkingGrid.RowDefinitions.Count - 2].Height = GridLength.Auto;
                     break;
                 case FormFlow.Vertical:
                 default:
@@ -655,6 +688,15 @@ namespace MGSimpleForms.Form.Building
                     break;
             }
         }
+
+        public void ConfirmColumnWidth(int Count)
+        {
+            if (Count < Columned.Columns)
+            {
+                Columned = new ColumnedSizeAttribute(Count);
+                CreateFormGrid(GridSize, Columned);
+            }
+        }
     }
 
     public static class BuildGridExt
@@ -662,13 +704,13 @@ namespace MGSimpleForms.Form.Building
         public static IEnumerable<PropertyInfo> GetPropertiesByParent(this Type T)
         {
             var props = T.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance);
-            return T.BaseType == null ? props : T.BaseType.GetPropertiesByParent().Concat(props);
+            return T.BaseType == null ? props : T.BaseType.GetPropertiesByParent().Concat(props).DistinctBy(i => i.Name);
         }
 
         public static IEnumerable<PropertyInfo> GetPropertiesByChild(this Type T)
         {
             var props = T.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance);
-            return T.BaseType == null ? props : props.Concat(T.BaseType.GetPropertiesByChild());
+            return T.BaseType == null ? props : props.Concat(T.BaseType.GetPropertiesByChild()).DistinctBy(i => i.Name);//((l, r) =>  l.Name.CompareTo(r.Name));
         }
         public static IEnumerable<PropertyInfo> GetPropertiesByAttribute<T>(this FormViewModel viewModel, Func<T, bool> search)
         {
@@ -716,6 +758,22 @@ namespace MGSimpleForms.Form.Building
             else
                 return GetFormViewModelGenericType(typ.BaseType);
         }
+
+
+        public static bool HasAttribute(this PropertyInfo prop, Type t)
+        {
+            return prop.GetCustomAttribute(t, true) != null;
+        }
+
+        public static T GetAttribute<T>(this PropertyInfo prop) where T : Attribute
+        {
+            var attr = prop.GetCustomAttribute(typeof(T), true);
+            if (attr == null)
+                return default(T);
+            return (T)attr;
+        }
+
+        public static bool HasAttribute<T>(this PropertyInfo prop) where T : Attribute => prop.GetCustomAttribute(typeof(T), true) != null;
 
     }
 }

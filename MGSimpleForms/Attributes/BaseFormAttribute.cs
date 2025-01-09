@@ -77,6 +77,7 @@ namespace MGSimpleForms.Attributes
     public sealed class TextBoxAttribute : AdvancedProps
     {
         public TextAlignment Alignment { get; set; } = TextAlignment.Center;
+        public TextWrap Wrap { get; set; } = TextWrap.Wrap;
         public int MaxLength { get; set; } = -1;
     }
 
@@ -195,7 +196,7 @@ namespace MGSimpleForms.Attributes
         /// </summary>
         public string GridFieldCheckPropName { get; set; }
     }
-   
+
     [AttributeUsage(AttributeTargets.Class)]
     public sealed class FormAttribute : BaseFormAttribute
     {
@@ -274,5 +275,12 @@ namespace MGSimpleForms.Attributes
         }
     }
 
+    public sealed class ProgressBar : BaseFormAttribute
+    {
 
+        public ProgressBar()
+        {
+            
+        }
+    }
 }

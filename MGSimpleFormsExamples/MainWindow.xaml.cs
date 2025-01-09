@@ -91,8 +91,17 @@ namespace MGSimpleFormsExamples
 
         private void Item_Click(object sender, RoutedEventArgs e)
         {
-
             Display(new ShowItemExample());
+        }
+
+        private void Replace_Click(object sender, RoutedEventArgs e)
+        {
+            Display(new testingFull());
+        }
+
+        private void Progress_Click(object sender, RoutedEventArgs e)
+        {
+            Display(new ProgressBarExample());
         }
     }
 }

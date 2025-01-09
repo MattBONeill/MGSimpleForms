@@ -7,5 +7,5 @@
         mc:Ignorable="d"
         Title="FormWindow" Height="450" Width="800" WindowStartupLocation="CenterScreen" 
         DataContextChanged="Window_DataContextChanged">
-    <local:FormUserControl/>
+    <local:FormUserControl CustomBuildOptions="{Binding CustomBuildOptions, RelativeSource={RelativeSource AncestorType=local:FormWindow}}"/>
 </Window>

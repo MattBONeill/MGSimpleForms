@@ -46,5 +46,27 @@ namespace MGSimpleForms.Form
 
 
         }
+
+
+
+        public static readonly DependencyProperty CustomBuildOptionsProperty = DependencyProperty.Register(nameof(CustomBuildOptions),
+            typeof(ICustomBuildOptions),
+            typeof(FormWindow),
+            new UIPropertyMetadata(null, new PropertyChangedCallback(OnBuildOptionsChanged)));
+
+        private static void OnBuildOptionsChanged(DependencyObject obj, DependencyPropertyChangedEventArgs e)
+        {
+            FormWindow control = obj as FormWindow;
+            if (control == null) return;
+
+            control.Window_DataContextChanged(null, e);
+        }
+
+        public ICustomBuildOptions CustomBuildOptions
+        {
+            get => (ICustomBuildOptions)GetValue(CustomBuildOptionsProperty);
+            set => SetValue(CustomBuildOptionsProperty, value);
+        }
+
     }
 }

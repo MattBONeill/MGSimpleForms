@@ -49,7 +49,7 @@ namespace MGSimpleForms.MVVM
         internal List<FrameworkElement> ToDisableElements = new List<FrameworkElement>();
         protected Dispatcher Dispatcher { get; set; }
 
-        internal UserControl Parent { get; set; }
+        internal ContentControl Parent { get; set; }
         public bool StopClose { get; private set; }
 
         /// <summary>
@@ -144,9 +144,15 @@ namespace MGSimpleForms.MVVM
         }
 
 
+        public static bool VerboseDispatcher = false;
+
         internal void SetDispatcher(Dispatcher dis)
         {
             Dispatcher = dis;
+            if (VerboseDispatcher)
+            {
+                MessageBox.Show($"{this.GetType().Name} got Dispatcher {dis?.ToString()}");
+            }
         }
         protected Task RunAsync(Action action, Action<Exception> ExceptionHandler = null)
         {
@@ -169,6 +175,54 @@ namespace MGSimpleForms.MVVM
                 StopClose = false;
             });
         }
+
+        protected Task RunAsync(Task action, Action<Exception> ExceptionHandler = null)
+        {
+            return Task.Run(() =>
+            {
+                StopClose = true;
+                DisableFormButtons();
+                try
+                {
+                    action.Wait();
+                }
+                catch (Exception ex)
+                {
+                    if (ExceptionHandler != null)
+                        ExceptionHandler(ex);
+                    else
+                        MessageBox.Show(ex.ToString());
+                }
+                EnableFormButtons();
+                StopClose = false;
+            });
+        }
+        public void AddCustomEvent(string Name, Action<object, EventArgs> action) 
+        {
+            var key = Name.ToUpperInvariant().Trim();
+            if (!GEvents.ContainsKey(key))
+                GEvents.Add(key, new List<Action<object, EventArgs>>());
+            GEvents[key].Add(action);
+        }
+
+        public void RemoveCustomEvent(string Name, Action<object, EventArgs> action) 
+        {
+            var key = Name.ToUpperInvariant().Trim();
+            if (!GEvents.ContainsKey(key))
+                GEvents.Add(key, new List<Action<object, EventArgs>>());
+            GEvents[key].Remove(action);
+        }
+
+        public void InvokeCustomEvent(string Name, object Sender, EventArgs args)
+        {
+            var key = Name.ToUpperInvariant().Trim();
+            if(GEvents.ContainsKey(key))
+                foreach(var action in GEvents[key])
+                    action.Invoke(Sender, args);
+        }
+
+        Dictionary<string, List<Action<object, EventArgs>>> GEvents = new Dictionary<string, List<Action<object, EventArgs>>>();
+
 
     }
 

@@ -162,6 +162,12 @@ namespace MGSimpleForms.Tools
 
         public static T GetParent<T>(this DependencyObject parent) where T : class
         {
+            if(parent == null)
+                return default(T);
+            
+            if (parent is T)
+                return parent as T;
+
             while ((parent = VisualTreeHelper.GetParent(parent)) != null)
             {
                 if (parent is T)

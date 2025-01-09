@@ -75,4 +75,41 @@ namespace MGSimpleFormsExamples.FormExamples
 
 
     }
+
+
+    internal class testing : FormViewModel
+    {
+        public testing()
+        {
+        }
+
+        [TextBox]
+        public string teststring1 { get => GetProperty<string>(); set => SetProperty(value); }
+
+        [Name("Shouldn't Exisit")]
+        [TextBox]
+        public string teststring2 { get => GetProperty<string>(); set => SetProperty(value); }
+
+        [Name("Name for Displaying Goes Here:")]
+        [TextBox]
+        public string teststring3 { get => GetProperty<string>(); set => SetProperty(value); }
+
+
+
+    }
+
+    [Form(PropertyOrder = PropertyOrder.ChildFirst)]
+    internal class testingFull : testing
+    {
+        public testingFull()
+        {
+        }
+
+        [Name("Should Exisit")]
+        [TextBox]
+        public new string teststring2 { get => GetProperty<string>(); set => SetProperty(value); }
+
+
+
+    }
 }

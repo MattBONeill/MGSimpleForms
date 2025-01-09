@@ -21,5 +21,7 @@
         <Button Name="lbl" Click="lbl_Click" >Label Testing</Button>
         <Button Name="Question" Click="Question_Click" >Question Box/Grid Form Testing</Button>
         <Button Name="Item" Click="Item_Click">Edit Item Testing</Button>
+        <Button Name="Replace" Click="Replace_Click">Replace Prop in Child Class</Button>
+        <Button Name="Progress" Click="Progress_Click">Progress Class</Button>
     </StackPanel>
 </Window>

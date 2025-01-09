@@ -15,20 +15,42 @@ using System.Windows.Input;
 using MGSimpleForms.MVVM;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using System.ComponentModel;
 
 namespace MGSimpleForms.Form.Building
 {
 
     public class ControlBuilder
     {
-        public static TextBlock BuildTitle(string Title, int fontsize, string TitleBinding)
+        public static FrameworkElement BuildTitle(string Title, int fontsize, string TitleBinding)
         {
             if(!string.IsNullOrEmpty(Title))
                 return new TextBlock() { Text = Title, FontSize = fontsize, TextAlignment = System.Windows.TextAlignment.Center };
             else
             {
-                var txt = new TextBlock() { FontSize = fontsize, TextAlignment = System.Windows.TextAlignment.Center };
-                txt.SetBinding(TextBlock.TextProperty, TitleBinding);
+                var txt = new Label() { FontSize = fontsize,
+                    HorizontalContentAlignment = HorizontalAlignment.Center, 
+                    VerticalContentAlignment = VerticalAlignment.Center,
+                    BorderThickness = new Thickness(0),
+                    Margin = new Thickness(0),
+                    Padding = new Thickness(0),
+                };//, TextAlignment = System.Windows.TextAlignment.Center };
+                txt.SetBinding(Label.ContentProperty, TitleBinding);
+
+                //txt.changed
+                var dp = DependencyPropertyDescriptor.FromProperty(Label.ContentProperty, typeof(Label));
+                dp.AddValueChanged(txt, (sender, args) =>
+                {
+                    if (string.IsNullOrWhiteSpace(txt.Content.ToString()))
+                    {
+                        txt.Visibility = Visibility.Collapsed;
+                    }
+                    else
+                    {
+                        txt.Visibility = Visibility.Visible;
+                        //MessageBox.Show("Visible");
+                    }
+                });
                 return txt;
             }
         }
@@ -293,10 +315,14 @@ namespace MGSimpleForms.Form.Building
         public static TextBox BuildTextBox(AdvancedProps txtOptions, PropertyInfo prop, FormViewModel viewModel)
         {
             var txt = new TextBox();
-            txt.SetBinding(TextBox.TextProperty, new Binding(prop.Name) { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.LostFocus });
+            if(prop.CanWrite)
+                txt.SetBinding(TextBox.TextProperty, new Binding(prop.Name) { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.LostFocus });
+            else
+                txt.SetBinding(TextBox.TextProperty, new Binding(prop.Name) { Mode = BindingMode.OneWay, UpdateSourceTrigger = UpdateSourceTrigger.LostFocus });
 
             FillOptions(txtOptions, txt, viewModel);
-
+            if (!prop.CanWrite)
+                txt.IsReadOnly = true;
             //var IsCollapsed = viewModel.GetProperty(txtOptions.IsCollapsed);
             //if (IsCollapsed != null)
             //{
@@ -342,6 +368,20 @@ namespace MGSimpleForms.Form.Building
                     txt.VerticalContentAlignment = VerticalAlignment.Center;
                     break;
             }
+
+            switch (txtOptions.Wrap)
+            {
+                case Attributes.TextWrap.Wrap:
+                    txt.TextWrapping = TextWrapping.Wrap;
+                    break;
+                case Attributes.TextWrap.NoWrap:
+                    txt.TextWrapping = TextWrapping.NoWrap;
+                    break;
+                case Attributes.TextWrap.WrapWithOverflow:
+                    txt.TextWrapping = TextWrapping.WrapWithOverflow;
+                    break;
+            }
+
             return txt;
         }
 
@@ -492,6 +532,9 @@ namespace MGSimpleForms.Form.Building
             view.Refresh();
 
         }
+
+
+
 
 
         public static ListView GetListGridView(string Name, Type lstType, string Selected = "", bool AdjustSize = true)
@@ -768,7 +811,7 @@ namespace MGSimpleForms.Form.Building
                 var Template = viewModel.GetProperty(lvOptions.DataTemplatePropName);
                 if (Template == null)
                 {
-                    Type subType = prop.PropertyType.GenericTypeArguments.FirstOrDefault(); ;
+                    Type subType = prop.PropertyType.GenericTypeArguments.FirstOrDefault();
 
                     if (subType != null && subType.IsClass && !subType.IsPrimitive && subType != typeof(string))
                     {
@@ -816,6 +859,40 @@ namespace MGSimpleForms.Form.Building
             return lst;
         }
 
+        internal static System.Windows.Controls.ProgressBar BuildProgressBar(Attributes.ProgressBar progressBar, PropertyInfo prop, FormViewModel viewModel)
+        {
+            
+            if (!prop.PropertyType.IsParent(typeof(IProgress<(int, int)>)))
+                throw new Exception($"{prop.Name} can't be a ProgressBar; ensure it is a IProgress<(int count, int length)>");
+            
+            if (!prop.PropertyType.GenericTypeArguments[0].IsParent(typeof((int, int))))// != typeof(Command))
+                throw new Exception($"{prop.Name} can't be a ProgressBar; ensure it is a IProgress<(int count, int length)>");
+            //if (!prop.PropertyType.GenericTypeArguments[1].IsParent(typeof(int)))// != typeof(Command))
+            //    throw new Exception($"{prop.Name} can't be a ProgressBar; ensure it is a IProgress<int, int>");
+
+            var bar = new System.Windows.Controls.ProgressBar();
+
+            var progress = new Progress<(int, int)>(item => {
+                var count = item.Item1;
+                var length = item.Item2;
+
+                if(length > bar.Value)
+                {
+                    bar.Value = 0;
+                }
+                bar.Maximum = length;
+                if (count < length)
+                    bar.Value = count;
+                else
+                    bar.Value = length;
+            });
+
+            prop.SetValue(viewModel, progress);
+
+
+            //throw new NotImplementedException();
+            return bar;
+        }
     }
 
     public static class ControlBuilderExt

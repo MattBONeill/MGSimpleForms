@@ -9,12 +9,14 @@ using System.Windows;
 
 namespace MGSimpleFormsExamples.EditExamples
 {
-    [Form(Flow = FormFlow.Columned,BorderSize =7)]
+    [Form(Flow = FormFlow.Columned, BorderSize =7, Border = Border.None)]
+    [ColumnedSize(4)]
     internal class ShowItemExample : FormViewModel<TestItem>
     {
         public ShowItemExample()
         {
             Item = new TestItem();
+            var testing = GetParent<Window>();
         }
 
 
@@ -40,6 +42,11 @@ namespace MGSimpleFormsExamples.EditExamples
         public string Field3 { get; set; }
         public decimal Field4 { get; set; }
         public subItem Field5 { get; set; }
+        public decimal Field6 { get; set; }
+        public decimal Field7 { get; set; }
+        public decimal Field8 { get; set; }
+        public decimal Field9 { get; set; }
+        public decimal Field10 { get; set; }
     }
 
 
