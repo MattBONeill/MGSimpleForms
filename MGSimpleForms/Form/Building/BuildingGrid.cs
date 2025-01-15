@@ -260,7 +260,7 @@ namespace MGSimpleForms.Form.Building
                 if (prop.PropertyType == typeof(int) ||
                    prop.PropertyType == typeof(decimal))
                 {
-                    Element = ControlBuilder.BuildTextBox(new Attributes.TextBoxAttribute() { Alignment = Attributes.TextAlignment.Left, Wrap = TextWrap.NoWrap }, prop, null);
+                    Element = ControlBuilder.BuildTextBox(new Attributes.TextBoxAttribute() { Alignment = Attributes.TextAlignment.Left, Wrap = TextWrap.NoWrap }, prop, ViewModel);
                     ((Control)Element).SetBinding(TextBox.TextProperty, new Binding("Item." + prop.Name) { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.LostFocus });
                 }
                 else if (prop.PropertyType == typeof(string))
@@ -278,7 +278,7 @@ namespace MGSimpleForms.Form.Building
                     }
                     else
                     {
-                        Element = ControlBuilder.BuildTextBox(new Attributes.TextBoxAttribute() { Alignment = Attributes.TextAlignment.Left, Wrap = TextWrap.NoWrap }, prop, null);
+                        Element = ControlBuilder.BuildTextBox(new Attributes.TextBoxAttribute() { Alignment = Attributes.TextAlignment.Left, Wrap = TextWrap.NoWrap }, prop, ViewModel);
                         ((Control)Element).SetBinding(TextBox.TextProperty, new Binding("Item." + prop.Name) { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.LostFocus });
                     }
                 }
