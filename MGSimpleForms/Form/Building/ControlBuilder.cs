@@ -16,6 +16,9 @@ using MGSimpleForms.MVVM;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using System.ComponentModel;
+using static System.Net.Mime.MediaTypeNames;
+using System.IO;
+using System.Security.Cryptography;
 
 namespace MGSimpleForms.Form.Building
 {
@@ -144,12 +147,14 @@ namespace MGSimpleForms.Form.Building
                 element.SetBinding(FrameworkElement.IsEnabledProperty, new Binding(propName));
         }
 
-        public static ComboBox BuildComboBox(ComboBoxAttribute cboOptions, PropertyInfo prop, ViewModel viewModel)
+        public static ComboBox BuildComboBox(ComboBoxAttribute cboOptions, PropertyInfo prop, FormViewModel viewModel)
         {
             if (!prop.PropertyType.IsParent(typeof(IEnumerable)))
                 throw new Exception($"{prop.Name} can't be a ComboBox; ensure it has IEnumerable as Parent");
 
             var cbo = new ComboBox();
+            viewModel.AddItemToDisable(cbo);
+
             if (cboOptions.IsEditable)
             {
                 cbo.IsEditable = true;
@@ -340,7 +345,7 @@ namespace MGSimpleForms.Form.Building
             //    };
             //}
 
-
+            viewModel.AddItemToDisable(txt);
             return txt;
         }
 
@@ -393,12 +398,23 @@ namespace MGSimpleForms.Form.Building
 
             txt.IsTabStop = false;
 
+            viewModel.AddItemToDisable(btn);
+
             btn.Click += (sender, e) =>
             {
                 //txt.Text = null;
                 var ofd = new OpenFileDialog();
                 ofd.Filter = fpOptions.Filter;
                 ofd.FileName = txt.Text;
+                if (!string.IsNullOrWhiteSpace(txt.Text))
+                {
+                    var dir = Path.GetDirectoryName(txt.Text);
+                    while (!Directory.Exists(dir))
+                    {
+                        dir = Path.GetDirectoryName(dir);
+                    }
+                    ofd.InitialDirectory = dir;
+                }
 
                 if (ofd.ShowDialog() == true)
                 {
@@ -417,14 +433,24 @@ namespace MGSimpleForms.Form.Building
         public static Button BuildFolderPickerButton(FolderPickerAttribute fpOptions, TextBox txt, FormViewModel viewModel)
         {
             var btn = new Button() { Content = "..." };
-
+            viewModel.AddItemToDisable(btn);
             txt.IsReadOnly = fpOptions.ReadOnly;
 
             btn.Click += (sender, e) =>
             {
                 // Create a "Save As" dialog for selecting a directory (HACK)
                 var dialog = new SaveFileDialog();
-                dialog.InitialDirectory = txt.Text; // Use current value for initial dir
+
+                if (!string.IsNullOrWhiteSpace(txt.Text))
+                {
+                    var dir = Path.GetDirectoryName(txt.Text);
+                    while (!Directory.Exists(dir))
+                    {
+                        dir = Path.GetDirectoryName(dir);
+                    }
+                    dialog.InitialDirectory = dir;
+                }
+                //dialog.InitialDirectory = txt.Text; // Use current value for initial dir
                 //txt.Text = null;
 
                 dialog.Title = "Select a Directory"; // instead of default "Save As"
@@ -468,11 +494,11 @@ namespace MGSimpleForms.Form.Building
             return dp;
         }
 
-        public static CheckBox BuildCheckBox(PropertyInfo prop)
+        public static CheckBox BuildCheckBox(PropertyInfo prop, FormViewModel viewModel)
         {
             var chk = new CheckBox() { VerticalAlignment = VerticalAlignment.Center };
             chk.SetBinding(System.Windows.Controls.Primitives.ToggleButton.IsCheckedProperty, prop.Name);
-
+            viewModel.AddItemToDisable(chk);
             return chk;
         }
 

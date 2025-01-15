@@ -165,7 +165,7 @@ namespace MGSimpleForms.Form.Building
                         itemsToAdd.Add(ControlBuilder.BuildLabel(VisualName));
                     }
 
-                    itemsToAdd.Add(ControlBuilder.BuildCheckBox(Prop));
+                    itemsToAdd.Add(ControlBuilder.BuildCheckBox(Prop, ViewModel));
                     break;
 
                 case GeneralControlAttribute:
@@ -284,7 +284,7 @@ namespace MGSimpleForms.Form.Building
                 }
                 else if (prop.PropertyType == typeof(bool))
                 {
-                    Element = ControlBuilder.BuildCheckBox(prop);
+                    Element = ControlBuilder.BuildCheckBox(prop, ViewModel);
                     ((Control)Element).SetBinding(System.Windows.Controls.Primitives.ToggleButton.IsCheckedProperty, "Item." + prop.Name);
                 }
                 else if (prop.PropertyType == typeof(DateTime))
